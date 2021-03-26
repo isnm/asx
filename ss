@@ -67,12 +67,13 @@ public:
 ROSNode *rn;
 
 sensor_msgs::JointState js;
+geometry_msgs::PoseArray pp;
 
 double currentjoint[6] = {0.0,0.0,0.0,0.0,0.0,0.0}; //degree
 double targetjoint[6] = {0.0,0.0,0.0,0.0,0.0,0.0}; //degree
 double zeropos[6] = {0.0,0.0,0.0,0.0,0.0,0.0}; //degree
 
-geometry_msgs::PoseArray pp;
+
 int state = 0;
 
 void GetIK(geometry_msgs::Pose &_ps);
@@ -290,11 +291,13 @@ int main(int argc, char **argv)
       else if(ret && state == 12)
       {
         ROS_INFO("state 12");
-        //std::vector<double> rpy = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        //geometry_msgs::Pose cartesian = jsCartesian(js, rpy);
+        std::vector<double> rpy = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        ROS_INFO("fk1");
+        geometry_msgs::Pose cartesian = jsCartesian(js, rpy);
+        ROS_INFO("fk2");
       
         for(int i = 0;i<6;i++){
-          
+          ROS_INFO("IK,%d",i);
           GetIK(pp.poses[i]);
         }
       }
@@ -309,11 +312,17 @@ int main(int argc, char **argv)
   return 0;
 }
 void GetIK(geometry_msgs::Pose &_ps){
+      ROS_INFO("IK function 1");
       moveit_msgs::GetPositionIK msg;
+      ROS_INFO("IK function 2");
       msg.request.ik_request.group_name = "wrist3_Link";
+      ROS_INFO("IK function 3");
       msg.request.ik_request.pose_stamped.pose = _ps;
+      ROS_INFO("IK function 4");
       msg.request.ik_request.attempts = 0;
+      ROS_INFO("IK function 5");
       ros::ServiceClient srv_ik = rn->n->serviceClient<moveit_msgs::GetPositionIK>("/compute_ik");
+      ROS_INFO("IK function 6");
       if(srv_ik.call(msg)){
           ROS_INFO("%f,%f,%f,%f,%f,%f",msg.response.solution.joint_state.position[0],msg.response.solution.joint_state.position[1],msg.response.solution.joint_state.position[2],msg.response.solution.joint_state.position[3],msg.response.solution.joint_state.position[4],msg.response.solution.joint_state.position[5]);
        
@@ -325,27 +334,46 @@ void GetIK(geometry_msgs::Pose &_ps){
 
   }
 geometry_msgs::Pose jsCartesian(const sensor_msgs::JointState &_js, std::vector<double> &_pose){
+  ROS_INFO("function fk 1");
   moveit_msgs::GetPositionFK msg;
+  ROS_INFO("function fk 2");
   msg.request.header.stamp = ros::Time::now();
+  ROS_INFO("function fk 3");
   msg.request.fk_link_names = {"wrist3_Link"};
+  ROS_INFO("function fk 4");
   msg.request.robot_state.joint_state = _js;
+  ROS_INFO("function fk 5");
   ros::ServiceClient srv_fk = rn->n->serviceClient<moveit_msgs::GetPositionFK>("/compute_fk");
+  ROS_INFO("function fk 6");
   if(srv_fk.call(msg)){
+    ROS_INFO("call1");
     _pose[0] = msg.response.pose_stamped[0].pose.position.x;
+    ROS_INFO("call2");
     _pose[1] = msg.response.pose_stamped[0].pose.position.y;
-    _pose[2] = msg.response.pose_stamped[0].pose.position.z;  
+    ROS_INFO("call3");
+    _pose[2] = msg.response.pose_stamped[0].pose.position.z; 
+    ROS_INFO("call4"); 
     tf::Quaternion q_ori;
+    ROS_INFO("call5");
     tf::quaternionMsgToTF(msg.response.pose_stamped[0].pose.orientation , q_ori);
+    ROS_INFO("call6");
     tf::Matrix3x3 m(q_ori);
+    ROS_INFO("call7");
     double roll, pitch, yaw;
+    ROS_INFO("call8");
     m.getRPY(roll, pitch, yaw);
+    ROS_INFO("call9");
     _pose[3] = roll;
+    ROS_INFO("call10");
     _pose[4] = pitch;
+    ROS_INFO("call11");
     _pose[5] = yaw;
+    ROS_INFO("call12");
   }
   else{
     ROS_ERROR("Failed to call srv");
 
   }
+  ROS_INFO("14");
   return msg.response.pose_stamped[0].pose;
 }
